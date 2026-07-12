@@ -262,17 +262,5 @@
   setInterval(hookForms, 1000);
 
 
-  // ── FACEBOOK LINK HIJACK ───────────────────────────────────────────────────
-  function hookFacebookLinks() {
-    var links = document.querySelectorAll("a");
-    for (var i = 0; i < links.length; i++) {
-      var href = links[i].getAttribute("href");
-      if (href && (href.includes("facebook.com/profile.php?id=61560320026895") || href.includes("facebook.com/people/Gopal"))) {
-        links[i].setAttribute("href", "https://www.facebook.com/p/Reville-Design-Studio-61560320026895/");
-      }
-    }
-  }
-  hookFacebookLinks();
-  setInterval(hookFacebookLinks, 1000);
-})();
+  })();
 </script>
