@@ -775,8 +775,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   hookForms();
   setInterval(hookForms, 1000);
 
+
+  // ── FACEBOOK LINK HIJACK ───────────────────────────────────────────────────
+  function hookFacebookLinks() {
+    var links = document.querySelectorAll("a");
+    for (var i = 0; i < links.length; i++) {
+      var href = links[i].getAttribute("href");
+      if (href && (href.includes("facebook.com/profile.php?id=61560320026895") || href.includes("facebook.com/people/Gopal"))) {
+        links[i].setAttribute("href", "https://www.facebook.com/p/Reville-Design-Studio-61560320026895/");
+      }
+    }
+  }
+  hookFacebookLinks();
+  setInterval(hookFacebookLinks, 1000);
 })();
-</script><div id="rv-overlay"></div><div id="rv-popup"><div id="rv-check"><svg viewBox="0 0 36 36" fill="none"><polyline points="6,19 14,27 30,10" stroke="#3a7d44" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div><h2>Thank You!</h2><p>Your message has been sent successfully.</p><button id="rv-close" type="button">Close</button></div>
+</script>
+<div id="rv-overlay"></div><div id="rv-popup"><div id="rv-check"><svg viewBox="0 0 36 36" fill="none"><polyline points="6,19 14,27 30,10" stroke="#3a7d44" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div><h2>Thank You!</h2><p>Your message has been sent successfully.</p><button id="rv-close" type="button">Close</button></div>
 
 <!-- SnippetEnd: z4vDz4Ms9 -->
 

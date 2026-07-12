@@ -1,0 +1,278 @@
+<script>
+(function () {
+  // Global flag to prevent double execution if Framer injects script twice
+  if (window._rvInit) return;
+  window._rvInit = true;
+
+  window._rvBusy = false;
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxEncTt7ReQhcbr6K6fqdVkeAnZ_5lFHKkux_ON8vLXe2wEJS9UAz0k1nvJpvfcG88q-A/exec";
+
+  // ── Error toast ────────────────────────────────────────────────────────────
+  function showErrorToast(msg) {
+    var d = document.createElement("div");
+    d.textContent = msg;
+    d.style.cssText = "position:fixed;bottom:30px;left:50%;transform:translateX(-50%);" +
+      "background:#d93025;color:#fff;padding:14px 28px;border-radius:50px;" +
+      "z-index:2147483647;font-family:sans-serif;font-size:15px;" +
+      "box-shadow:0 4px 12px rgba(0,0,0,.2);white-space:nowrap;";
+    document.body.appendChild(d);
+    setTimeout(function () {
+      d.style.transition = "opacity 0.4s";
+      d.style.opacity = "0";
+      setTimeout(function () { d.remove(); }, 400);
+    }, 4000);
+  }
+
+  // ── Build popup (only once) ────────────────────────────────────────────────
+  function buildPopup() {
+    if (document.getElementById("rv-overlay")) return;
+
+    var style = document.createElement("style");
+    style.textContent =
+      "@keyframes rv-in{from{opacity:0;transform:translate(-50%,-50%) scale(.88)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}" +
+      "@keyframes rv-out{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(.88)}}" +
+      "@keyframes rv-check{from{stroke-dashoffset:48}to{stroke-dashoffset:0}}" +
+      "#rv-overlay{position:fixed;inset:0;background:rgba(10,10,20,.55);backdrop-filter:blur(4px);z-index:2147483640;display:none;}" +
+      "#rv-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:20px;" +
+        "box-shadow:0 24px 64px rgba(0,0,0,.18);padding:44px 36px 36px;width:min(420px,calc(100vw - 40px));" +
+        "text-align:center;z-index:2147483641;font-family:'Inter',sans-serif;animation:rv-in .32s cubic-bezier(.34,1.56,.64,1) forwards; display:none;}" +
+      "#rv-popup.hiding{animation:rv-out .22s ease forwards;}" +
+      "#rv-check{width:72px;height:72px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;}" +
+      "#rv-check polyline{stroke-dasharray:48;stroke-dashoffset:48;animation:rv-check .45s .2s ease forwards;}" +
+      "#rv-popup h2{font-size:26px;font-weight:700;color:#0e1010;margin:0 0 10px;}" +
+      "#rv-popup p{font-size:15px;color:#585d69;margin:0 0 28px;line-height:1.5;}" +
+      "#rv-close{display:block;width:100%;padding:14px;background:#0e1010;color:#fff;border:none;" +
+        "border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;}" +
+      "#rv-close:hover{background:#28286f;}" +
+      "@media(max-width:480px){#rv-popup{padding:28px 20px;}}";
+    document.head.appendChild(style);
+
+    var overlay = document.createElement("div");
+    overlay.id = "rv-overlay";
+
+    var popup = document.createElement("div");
+    popup.id = "rv-popup";
+    popup.innerHTML =
+      '<div id="rv-check">' +
+        '<svg viewBox="0 0 36 36" fill="none">' +
+          '<polyline points="6,19 14,27 30,10" stroke="#3a7d44" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>' +
+      '</div>' +
+      '<h2>Thank You!</h2>' +
+      '<p>Your message has been sent successfully.</p>' +
+      '<button id="rv-close" type="button">Close</button>';
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+
+    function doClose() {
+      var o = document.getElementById("rv-overlay");
+      var p = document.getElementById("rv-popup");
+      if (!o || !p) return;
+      p.classList.add("hiding");
+      setTimeout(function () {
+        o.style.display = "none";
+        p.style.display = "none";
+        p.classList.remove("hiding");
+        document.body.style.overflow = "";
+      }, 220);
+    }
+
+    document.getElementById("rv-close").addEventListener("click", doClose);
+    overlay.addEventListener("click", doClose);
+    document.addEventListener("keydown", function (e) {
+      if ((e.key === "Escape" || e.keyCode === 27) &&
+          document.getElementById("rv-overlay").style.display === "block") {
+        doClose();
+      }
+    });
+  }
+
+  // ── Show popup ─────────────────────────────────────────────────────────────
+  function showPopup() {
+    var o = document.getElementById("rv-overlay");
+    var p = document.getElementById("rv-popup");
+    if (!o || !p) return;
+    o.style.display = "block";
+    p.style.display = "block";
+    document.body.style.overflow = "hidden";
+  }
+
+  // ── Reset form fields (React-safe) ─────────────────────────────────────────
+  function setNativeValue(element, value) {
+    var valueSetter = Object.getOwnPropertyDescriptor(element, "value") ? Object.getOwnPropertyDescriptor(element, "value").set : null;
+    var prototype = Object.getPrototypeOf(element);
+    var prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value") ? Object.getOwnPropertyDescriptor(prototype, "value").set : null;
+    
+    if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+      prototypeValueSetter.call(element, value);
+    } else if (valueSetter) {
+      valueSetter.call(element, value);
+    } else {
+      element.value = value;
+    }
+  }
+
+  function resetForm(form) {
+    var fields = form.querySelectorAll("input,textarea");
+    for (var i = 0; i < fields.length; i++) {
+      setNativeValue(fields[i], "");
+      fields[i].classList.add("framer-form-input-empty");
+      fields[i].dispatchEvent(new Event("input",  { bubbles: true }));
+      fields[i].dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    form.reset();
+  }
+
+  // ── Main handler ───────────────────────────────────────────────────────────
+  function handleSubmission(form, btn) {
+    if (window._rvBusy) {
+      console.log("Already submitting — ignored.");
+      return;
+    }
+
+    // Collect field values
+    var vals = {};
+    var fields = form.querySelectorAll("input,textarea,select");
+    for (var i = 0; i < fields.length; i++) {
+      if (fields[i].name) vals[fields[i].name] = fields[i].value;
+    }
+
+    var name = (vals["Name"] || vals["name"] || "").trim();
+    var mail = (vals["Email"] || vals["email"] || "").trim();
+    var msg  = (vals["Message"] || vals["Massage"] || vals["message"] || "").trim();
+    var service = (vals["Service"] || vals["service"] || vals["Services"] || vals["services"] || "").trim();
+
+    // In case Framer strips name attributes, fallback to placeholder parsing
+    if (!name || !mail || !msg || !service) {
+      for (var j = 0; j < fields.length; j++) {
+        var f = fields[j];
+        var p = (f.placeholder || "").toLowerCase();
+        if (!name && p.indexOf("name") !== -1) name = f.value.trim();
+        if (!mail && (f.type === "email" || p.indexOf("email") !== -1)) mail = f.value.trim();
+        if (!service && (p.indexOf("service") !== -1 || p.indexOf("services") !== -1)) service = f.value.trim();
+        if (!msg && (f.tagName === "TEXTAREA" || p.indexOf("message") !== -1)) msg = f.value.trim();
+      }
+    }
+
+    if (!name || !mail || !msg) {
+      showErrorToast("Please fill in Name, Email and Message fields.");
+      return;
+    }
+
+    // Lock
+    window._rvBusy = true;
+    console.log("Reville: submission started.");
+
+    // Disable button
+    var btnText = btn ? (btn.querySelector("p, span") || btn) : null;
+    var origTxt = btnText ? (btnText.innerText || btnText.textContent || "Send Now") : "Send Now";
+    if (btn)     { btn.style.pointerEvents = "none"; btn.style.opacity = "0.7"; }
+    if (btnText) { btnText.innerText = "Sending..."; }
+
+    // Build payload
+    var params = new URLSearchParams();
+    params.append("Name", name);
+    params.append("Email", mail);
+    var phone = (vals["Phone"] || vals["phone"] || "").trim();
+    if (phone) params.append("Phone", phone);
+    if (service) params.append("Service", service);
+    params.append("Message", msg);
+    params.append("Date", new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }));
+
+    // Single-fire restore
+    var restored = false;
+    function restore(ok) {
+      if (restored) return;
+      restored = true;
+      if (btn)     { btn.style.pointerEvents = "auto"; btn.style.opacity = "1"; }
+      if (btnText) { btnText.innerText = origTxt; }
+      window._rvBusy = false;
+      console.log("Reville: submission complete.");
+      if (ok) {
+        showPopup();
+        resetForm(form);
+      } else {
+        showErrorToast("Something went wrong. Please email info@revilledesignstudio.com");
+      }
+    }
+
+    fetch(SCRIPT_URL, {
+      method:  "POST",
+      mode:    "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body:    params.toString()
+    })
+    .then(function () {
+      console.log("Reville: fetch done.");
+      restore(true);
+    })
+    .catch(function (err) {
+      console.warn("Reville: fetch failed:", err);
+      restore(false);
+    });
+  }
+
+  // ── Init popup ─────────────────────────────────────────────────────────────
+  buildPopup();
+
+  // ── PROACTIVE SPA HOOKING ──────────────────────────────────────────────────
+  function hookForms() {
+    var forms = document.querySelectorAll("form");
+    for (var i = 0; i < forms.length; i++) {
+      var form = forms[i];
+      if (form.dataset.rvHooked) continue;
+
+      var btn = null;
+      var els = form.querySelectorAll("div, a, button, input");
+      
+      // Look for the submit button inside the form
+      for (var j = 0; j < els.length; j++) {
+        var text = (els[j].value || els[j].textContent || "").toLowerCase();
+        // Check for common submit button text
+        if (text.indexOf("send") !== -1 || text.indexOf("submit") !== -1 || text.indexOf("get in touch") !== -1) {
+          // Verify it's not a huge container by checking if it contains form inputs
+          if (els[j].querySelectorAll && els[j].querySelectorAll("input, textarea").length === 0) {
+            btn = els[j];
+          }
+        }
+      }
+
+      // Hook events directly to the elements
+      if (btn) {
+        form.dataset.rvHooked = "true";
+        (function(f, b) {
+          b.addEventListener("click", function(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            handleSubmission(f, b);
+          }, true);
+          f.addEventListener("submit", function(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            handleSubmission(f, b);
+          }, true);
+        })(form, btn);
+      }
+    }
+  }
+
+  // Run hook immediately and every 1s to guarantee it catches Framer rendering
+  hookForms();
+  setInterval(hookForms, 1000);
+
+
+  // ── FACEBOOK LINK HIJACK ───────────────────────────────────────────────────
+  function hookFacebookLinks() {
+    var links = document.querySelectorAll("a");
+    for (var i = 0; i < links.length; i++) {
+      var href = links[i].getAttribute("href");
+      if (href && (href.includes("facebook.com/profile.php?id=61560320026895") || href.includes("facebook.com/people/Gopal"))) {
+        links[i].setAttribute("href", "https://www.facebook.com/p/Reville-Design-Studio-61560320026895/");
+      }
+    }
+  }
+  hookFacebookLinks();
+  setInterval(hookFacebookLinks, 1000);
+})();
+</script>
